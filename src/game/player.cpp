@@ -1,3 +1,4 @@
+#pragma once
 #include "../include/game/player.h"
 
 Player::Player(int startX, int startY) : Entity(startX, startY, 1) {}

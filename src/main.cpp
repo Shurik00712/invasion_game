@@ -6,6 +6,7 @@
 #include "../include/algorithms/create_maze.h"
 #include "../include/graphics/renderer.h"
 #include "../include/utils/maze_renderer.h"
+#include "../include/utils/entity_renderer.h"
 #include "../include/utils/inputhandler.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -21,12 +22,14 @@ int main() {
     GameLogic logic;
     Renderer renderer(SCREEN_WIDTH, SCREEN_HEIGHT);
     MazeRenderer mazeRenderer(CELL_SIZE);
+    EntityRenderer entityRenderer(CELL_SIZE);
 
     if (!renderer.init()) {
         return -1;
     }
 
     mazeRenderer.init(SCREEN_WIDTH, SCREEN_HEIGHT);
+    entityRenderer.init(SCREEN_WIDTH, SCREEN_HEIGHT);
 
     glfwSetKeyCallback(renderer.getWindow(), InputHandler::keyCallback);
 
@@ -44,7 +47,9 @@ int main() {
         }
 
         renderer.clear();
-        mazeRenderer.render(grid, player);
+        mazeRenderer.render(grid);
+        entityRenderer.render_invader(enemy, 1.5f, 1.f, 1.5f);
+        entityRenderer.render_player(player);
         renderer.swapBuffers();
 
         glfwWaitEventsTimeout(0.016);

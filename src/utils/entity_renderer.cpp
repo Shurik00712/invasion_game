@@ -1,4 +1,4 @@
-#include "../include/utils/maze_renderer.h"
+#include "../include/utils/entity_renderer.h"
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -21,15 +21,15 @@ void main() {
 }
 )";
 
-MazeRenderer::MazeRenderer(int cellSize) : cellSize_(cellSize), shaderProgram_(0), VAO_(0), VBO_(0) {
+EntityRenderer::EntityRenderer(int cellSize) : cellSize_(cellSize), shaderProgram_(0), VAO_(0), VBO_(0) {
     for (int i = 0; i < 16; ++i) projMatrix_[i] = 0;
 }
 
-MazeRenderer::~MazeRenderer() {
+EntityRenderer::~EntityRenderer() {
     cleanup();
 }
 
-bool MazeRenderer::compileShader(unsigned int& shader, unsigned int type, const char* source) {
+bool EntityRenderer::compileShader(unsigned int& shader, unsigned int type, const char* source) {
     shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, nullptr);
     glCompileShader(shader);
@@ -45,7 +45,7 @@ bool MazeRenderer::compileShader(unsigned int& shader, unsigned int type, const 
     return true;
 }
 
-bool MazeRenderer::createShaderProgram() {
+bool EntityRenderer::createShaderProgram() {
     unsigned int vertexShader, fragmentShader;
 
     if (!compileShader(vertexShader, GL_VERTEX_SHADER, vertexShaderSource)) return false;
@@ -70,7 +70,7 @@ bool MazeRenderer::createShaderProgram() {
     return true;
 }
 
-void MazeRenderer::setupMatrices(int screenWidth, int screenHeight) {
+void EntityRenderer::setupMatrices(int screenWidth, int screenHeight) {
     projMatrix_[0] = 2.0f / (float)screenWidth;
     projMatrix_[5] = 2.0f / (float)screenHeight;
     projMatrix_[10] = -1.0f;
@@ -79,7 +79,7 @@ void MazeRenderer::setupMatrices(int screenWidth, int screenHeight) {
     projMatrix_[15] = 1.0f;
 }
 
-bool MazeRenderer::init(int screenWidth, int screenHeight) {
+bool EntityRenderer::init(int screenWidth, int screenHeight) {
     if (!createShaderProgram()) return false;
 
     glGenVertexArrays(1, &VAO_);
@@ -102,52 +102,66 @@ bool MazeRenderer::init(int screenWidth, int screenHeight) {
     return true;
 }
 
-void MazeRenderer::drawWall(float x1, float y1, float x2, float y2) {
-    std::vector<float> vertices = { x1, y1, x2, y2 };
+
+
+
+void EntityRenderer::drawInvader(float x, float y, float r, float g, float b) {
+    float cx = x * cellSize_ + cellSize_ / 2.0f;
+    float cy = y * cellSize_ + cellSize_ / 2.0f;
+    float radius = cellSize_ * 0.3f;
+    int segments = 20;
+
+    std::vector<float> vertices;
+    for (int i = 0; i <= segments; ++i) {
+        float angle = 2.0f * 3.14159265f * i / segments;
+        vertices.push_back(cx + radius * cos(angle));
+        vertices.push_back(cy + radius * sin(angle));
+    }
+
+    int colorLoc = glGetUniformLocation(shaderProgram_, "uColor");
+    glUniform3f(colorLoc, r, g, b);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO_);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
-    glDrawArrays(GL_LINES, 0, 2);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, segments + 1);
 }
+void EntityRenderer::drawPlayer(float x, float y) {
+    float cx = x * cellSize_ + cellSize_ / 2.0f;
+    float cy = y * cellSize_ + cellSize_ / 2.0f;
+    float radius = cellSize_ * 0.3f;
+    int segments = 20;
 
-void MazeRenderer::drawCell(int x, int y, const Cell& cell, float cellW, float cellH) {
-    float left = x * cellW;
-    float right = (x + 1) * cellW;
-    float top = y * cellH;
-    float bottom = (y + 1) * cellH;
+    std::vector<float> vertices;
+    for (int i = 0; i <= segments; ++i) {
+        float angle = 2.0f * 3.14159265f * i / segments;
+        vertices.push_back(cx + radius * cos(angle));
+        vertices.push_back(cy + radius * sin(angle));
+    }
 
     int colorLoc = glGetUniformLocation(shaderProgram_, "uColor");
-    glUniform3f(colorLoc, 1.0f, 1.0f, 1.0f);
-    if (cell.top) {
-        drawWall(left, top, right, top);
-    }
-    if (cell.bottom) {
-        drawWall(left, bottom, right, bottom);
-    }
-    if (cell.left) {
-        drawWall(left, top, left, bottom);
-    }
-    if (cell.right) {
-        drawWall(right, top, right, bottom);
-    }
+    glUniform3f(colorLoc, 2.f, 2.f, 2.f);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, segments + 1);
 }
 
-
-void MazeRenderer::render(const Grid& grid) {
-    float cellW = (float)cellSize_;
-    float cellH = (float)cellSize_;
+void EntityRenderer::render_invader(const Invader& player, float r, float g, float b) {
 
     glUseProgram(shaderProgram_);
     glBindVertexArray(VAO_);
-
-    for (int y = 0; y < grid.h; ++y) {
-        for (int x = 0; x < grid.w; ++x) {
-            drawCell(x, y, grid.grid[y][x], cellW, cellH);
-        }
-    }
+    EntityRenderer::drawInvader((float)player.getX(), (float)player.getY(), r, g, b);
 }
 
-void MazeRenderer::cleanup() {
+
+void EntityRenderer::render_player(const Player& player) {
+
+    glUseProgram(shaderProgram_);
+    glBindVertexArray(VAO_);
+    EntityRenderer::drawPlayer((float)player.getX(), (float)player.getY());
+}
+
+void EntityRenderer::cleanup() {
     if (VAO_) glDeleteVertexArrays(1, &VAO_);
     if (VBO_) glDeleteBuffers(1, &VBO_);
     if (shaderProgram_) glDeleteProgram(shaderProgram_);

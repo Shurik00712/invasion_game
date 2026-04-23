@@ -1,21 +1,21 @@
-// maze_renderer.h
 #pragma once
-#include "../include/core/grid.h"
+#include "../include/game/player.h"
+#include "../include/game/invader.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
-class MazeRenderer {
+class EntityRenderer {
 public:
-    MazeRenderer(int cellSize = 40);
-    ~MazeRenderer();
+    EntityRenderer(int cellSize = 40);
+    ~EntityRenderer();
 
     bool init(int screenWidth, int screenHeight);
-    void render(const Grid& grid);
+    void render_player(const Player& player);
+    void render_invader(const Invader& invader, float r, float g, float b);
     void cleanup();
 
 private:
-    void drawWall(float x1, float y1, float x2, float y2);
-    void drawCell(int x, int y, const Cell& cell, float cellW, float cellH);
+    void drawPlayer(float x, float y);
+    void drawInvader(float x, float y, float r, float g, float b);
 
     bool compileShader(unsigned int& shader, unsigned int type, const char* source);
     bool createShaderProgram();

@@ -1,3 +1,4 @@
+#pragma once
 #include "../include/game/entity.h"
 
 void Entity::move(int dx, int dy) {

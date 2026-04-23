@@ -1,3 +1,4 @@
+#pragma once
 #include "../include/game/invader.h"
 #include <cmath>
 

@@ -1,3 +1,4 @@
+#pragma once
 #include "entity.h"
 
 class Invader : public Entity {
