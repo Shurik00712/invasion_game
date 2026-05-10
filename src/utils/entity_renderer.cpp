@@ -113,7 +113,7 @@ void EntityRenderer::drawInvader(float x, float y, float r, float g, float b) {
 
     std::vector<float> vertices;
     for (int i = 0; i <= segments; ++i) {
-        float angle = 2.0f * 3.14159265f * i / segments;
+        float angle = 2.0f * 3.14159265f * i / (float)segments;  
         vertices.push_back(cx + radius * cos(angle));
         vertices.push_back(cy + radius * sin(angle));
     }
@@ -133,13 +133,13 @@ void EntityRenderer::drawPlayer(float x, float y) {
 
     std::vector<float> vertices;
     for (int i = 0; i <= segments; ++i) {
-        float angle = 2.0f * 3.14159265f * i / segments;
+        float angle = 2.0f * 3.14159265f * i / (float)segments;  
         vertices.push_back(cx + radius * cos(angle));
         vertices.push_back(cy + radius * sin(angle));
     }
 
     int colorLoc = glGetUniformLocation(shaderProgram_, "uColor");
-    glUniform3f(colorLoc, 2.f, 2.f, 2.f);
+    glUniform3f(colorLoc, 1.0f, 1.0f, 1.0f);  
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO_);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
@@ -151,6 +151,12 @@ void EntityRenderer::render_invader(const Invader& player, float r, float g, flo
     glUseProgram(shaderProgram_);
     glBindVertexArray(VAO_);
     EntityRenderer::drawInvader((float)player.getX(), (float)player.getY(), r, g, b);
+}
+
+void EntityRenderer::render_invaders(std::vector<Invader>& invaders) {
+    for (Invader& invader: invaders) {
+        EntityRenderer::render_invader(invader, 1.3, 1.3, 1.3);
+    }
 }
 
 

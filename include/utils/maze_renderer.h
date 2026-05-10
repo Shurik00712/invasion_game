@@ -1,4 +1,3 @@
-// maze_renderer.h
 #pragma once
 #include "../include/core/grid.h"
 #include <glad/glad.h>
@@ -15,15 +14,15 @@ public:
 
 private:
     void drawWall(float x1, float y1, float x2, float y2);
-    void drawCell(int x, int y, const Cell& cell, float cellW, float cellH);
+    void drawCell(int x, int y, int grid_h, const Cell& cell, float cellW, float cellH);
 
     bool compileShader(unsigned int& shader, unsigned int type, const char* source);
     bool createShaderProgram();
-    void setupMatrices(int screenWidth, int screenHeight);
 
     int cellSize_;
+    float screenWidth_;
+    float screenHeight_;
     unsigned int shaderProgram_;
     unsigned int VAO_;
     unsigned int VBO_;
-    float projMatrix_[16];
 };

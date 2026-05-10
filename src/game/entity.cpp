@@ -1,5 +1,4 @@
-#pragma once
-#include "../include/game/entity.h"
+#include "../../include/game/entity.h"
 
 void Entity::move(int dx, int dy) {
     x_ += dx * speed_;

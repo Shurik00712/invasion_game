@@ -3,6 +3,7 @@
 #include "../include/game/invader.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <vector>
 class EntityRenderer {
 public:
     EntityRenderer(int cellSize = 40);
@@ -11,6 +12,7 @@ public:
     bool init(int screenWidth, int screenHeight);
     void render_player(const Player& player);
     void render_invader(const Invader& invader, float r, float g, float b);
+    void render_invaders(std::vector<Invader>& invaders);
     void cleanup();
 
 private:

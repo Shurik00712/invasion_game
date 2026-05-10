@@ -1,12 +1,20 @@
-// create_maze.cpp
-#include "../include/algorithms/create_maze.h"
+#include "../../include/algorithms/create_maze.h"
 #include <deque>
-#include <random>
 #include <algorithm>
+#include <random>
+
+std::mt19937 MazeGenerator::gen(std::random_device{}());
 
 void MazeGenerator::generate(Grid& grid) {
+    for (int y = 0; y < grid.h; ++y) {
+        for (int x = 0; x < grid.w; ++x) {
+            grid.grid[y][x].right = true;
+            grid.grid[y][x].bottom = true;
+        }
+    }
+
     std::deque<Point> stack;
-    stack.push_back({ 0, 0 });
+    stack.push_back({0, 0});
 
     std::vector<Point> directions = { {1, 0}, {0, 1}, {-1, 0}, {0, -1} };
     std::vector<std::vector<bool>> visited(grid.h, std::vector<bool>(grid.w, false));
@@ -22,39 +30,60 @@ void MazeGenerator::generate(Grid& grid) {
             Point next = { current.first + dir.first, current.second + dir.second };
 
             if (isInside(next, grid.w, grid.h) && !visited[next.second][next.first]) {
-                removeWall(grid, current, dir);
+                if (dir.first == 1) {
+                    grid.grid[current.second][current.first].right = false;
+                }
+                else if (dir.first == -1) {
+                    grid.grid[next.second][next.first].right = false;
+                }
+                else if (dir.second == 1) {
+                    grid.grid[current.second][current.first].bottom = false;
+                }
+                else if (dir.second == -1) {
+                    grid.grid[next.second][next.first].bottom = false;
+                }
+
                 visited[next.second][next.first] = true;
                 stack.push_back(next);
+            }
+        }
+    }
+
+}
+
+void MazeGenerator::addExtraPaths(Grid& grid, int extraPathsCount) {
+    std::uniform_int_distribution<int> distX(1, grid.w - 2);
+    std::uniform_int_distribution<int> distY(1, grid.h - 2);
+    std::uniform_int_distribution<int> distDir(0, 3);
+
+    std::vector<Point> directions = { {1, 0}, {0, 1}, {-1, 0}, {0, -1} };
+
+    for (int i = 0; i < extraPathsCount; ++i) {
+        int x = distX(gen);
+        int y = distY(gen);
+        auto& dir = directions[distDir(gen)];
+
+        Point neighbor = { x + dir.first, y + dir.second };
+
+        if (isInside(neighbor, grid.w, grid.h)) {
+            if (dir.first == 1) {
+                grid.grid[y][x].right = false;
+            }
+            else if (dir.first == -1) {
+                grid.grid[y][x - 1].right = false;
+            }
+            else if (dir.second == 1) {
+                grid.grid[y][x].bottom = false;
+            }
+            else if (dir.second == -1) {
+                grid.grid[y - 1][x].bottom = false;
             }
         }
     }
 }
 
 void MazeGenerator::shuffleDirections(std::vector<Point>& directions) {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
     std::shuffle(directions.begin(), directions.end(), gen);
-}
-
-void MazeGenerator::removeWall(Grid& grid, const Point& current, const Point& direction) {
-    auto& cell = grid.grid[current.second][current.first];
-
-    if (direction.first == -1) {
-        cell.left = false;
-        grid.grid[current.second][current.first - 1].right = false;
-    }
-    else if (direction.first == 1) {
-        cell.right = false;
-        grid.grid[current.second][current.first + 1].left = false;
-    }
-    else if (direction.second == -1) {
-        cell.top = false;
-        grid.grid[current.second - 1][current.first].bottom = false;
-    }
-    else if (direction.second == 1) {
-        cell.bottom = false;
-        grid.grid[current.second + 1][current.first].top = false;
-    }
 }
 
 bool MazeGenerator::isInside(const Point& p, int width, int height) {

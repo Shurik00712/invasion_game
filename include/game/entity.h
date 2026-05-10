@@ -8,11 +8,13 @@ public:
 
     virtual ~Entity() = default;
     virtual void move(int dx, int dy);
+    virtual void updateMovement() = 0;
 
     int getX() const { return x_; }
     int getY() const { return y_; }
     int getSpeed() const { return speed_; }
     void setPosition(int x, int y);
+    void setSpeed(int speed) { speed_ = speed; }
 
 protected:
     int x_;

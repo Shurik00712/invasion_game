@@ -1,4 +1,3 @@
-// main.cpp
 #include "../include/core/grid.h"
 #include "../include/game/player.h"
 #include "../include/game/invader.h"
@@ -10,15 +9,17 @@
 #include "../include/utils/inputhandler.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
+using namespace std;
 
 int main() {
     const int SCREEN_WIDTH = 1280;
     const int SCREEN_HEIGHT = 640;
     const int CELL_SIZE = 40;
 
-    Grid grid(SCREEN_WIDTH/CELL_SIZE, SCREEN_HEIGHT/CELL_SIZE);
-    Player player(0, 0);
-    Invader enemy(0, 10);
+    Grid grid(SCREEN_WIDTH / CELL_SIZE, SCREEN_HEIGHT / CELL_SIZE);
+    Player player(1, 1);
+
+    vector<Invader> invaders;
     GameLogic logic;
     Renderer renderer(SCREEN_WIDTH, SCREEN_HEIGHT);
     MazeRenderer mazeRenderer(CELL_SIZE);
@@ -34,9 +35,20 @@ int main() {
     glfwSetKeyCallback(renderer.getWindow(), InputHandler::keyCallback);
 
     MazeGenerator::generate(grid);
+    MazeGenerator::addExtraPaths(grid, (grid.w * grid.h) / 10);
+
+    logic.addInvader(invaders, 10, 10);
+    logic.addInvader(invaders, 15, 5);
+    logic.addInvader(invaders, 8, 15);
+    logic.addInvader(invaders, 20, 12);
 
     bool running = true;
-
+    for (int y = 0; y < grid.h; ++y) {
+        for (int x = 0; x < grid.w; ++x) {
+            std::cout << grid.grid[y][x].right << " " << grid.grid[y][x].bottom << " | ";
+        }
+        std::cout << std::endl;
+    }
     while (!renderer.shouldClose() && running) {
         renderer.pollEvents();
 
@@ -46,13 +58,15 @@ int main() {
             break;
         }
 
+        logic.updateInvaders(invaders, player, grid);
+
         renderer.clear();
         mazeRenderer.render(grid);
-        entityRenderer.render_invader(enemy, 1.5f, 1.f, 1.5f);
+        entityRenderer.render_invaders(invaders);
         entityRenderer.render_player(player);
         renderer.swapBuffers();
 
-        glfwWaitEventsTimeout(0.016);
+        glfwWaitEventsTimeout(10);
     }
 
     return 0;

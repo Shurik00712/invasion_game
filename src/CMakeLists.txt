@@ -3,7 +3,7 @@
 #
 
 # Add source to this project's executable.
-add_executable (invasion_game "main.cpp" "utils/drawconsole.cpp" "game/game_logic.cpp" "algorithms/create_maze.cpp" "game/player.cpp" "utils/inputhandler.cpp" "graphics/renderer.cpp" "utils/maze_renderer.cpp" "game/entity.cpp" "game/invader.cpp" "utils/entity_renderer.cpp")
+add_executable (invasion_game "main.cpp"  "game/game_logic.cpp" "algorithms/create_maze.cpp" "game/player.cpp" "utils/inputhandler.cpp" "graphics/renderer.cpp" "utils/maze_renderer.cpp" "game/entity.cpp" "game/invader.cpp" "utils/entity_renderer.cpp")
 target_compile_definitions(invasion_game PRIVATE _HAS_STD_BYTE=0)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 

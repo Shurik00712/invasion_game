@@ -1,5 +1,6 @@
 #pragma once
-#include "../include/core/grid.h"
+#include "../core/grid.h"
+#include "invader.h"
 #include "player.h"
 
 enum class Command {
@@ -10,8 +11,10 @@ class GameLogic {
 public:
     bool update(Grid& grid, Player& player, Command cmd);
     void changeWalls(Grid& grid);
+    void addInvader(std::vector<Invader>& invaders, int x, int y);
+    void updateInvaders(std::vector<Invader>& invaders, Player& player, const Grid& grid);
 
 private:
-    bool isValidMove(const Player& player, const Grid& grid, int dx, int dy) const;
-    void tryMove(Player& player, const Grid& grid, int dx, int dy);
+    bool isValidMove(const Entity& entity, const Grid& grid, int dx, int dy) const;
+    void tryMove(Entity& entity, const Grid& grid, int dx, int dy);
 };

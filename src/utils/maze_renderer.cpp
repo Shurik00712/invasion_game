@@ -5,10 +5,9 @@
 
 static const char* vertexShaderSource = R"(
 #version 330 core
-layout(location = 0) in vec2 aPos;
-uniform mat4 uProjection;
+in vec2 aPos;
 void main() {
-    gl_Position = uProjection * vec4(aPos, 0.0, 1.0);
+    gl_Position = vec4(aPos, 0.0, 1.0);
 }
 )";
 
@@ -21,8 +20,7 @@ void main() {
 }
 )";
 
-MazeRenderer::MazeRenderer(int cellSize) : cellSize_(cellSize), shaderProgram_(0), VAO_(0), VBO_(0) {
-    for (int i = 0; i < 16; ++i) projMatrix_[i] = 0;
+MazeRenderer::MazeRenderer(int cellSize) : cellSize_(cellSize), shaderProgram_(0), VAO_(0), VBO_(0), screenWidth_(0), screenHeight_(0) {
 }
 
 MazeRenderer::~MazeRenderer() {
@@ -37,9 +35,6 @@ bool MazeRenderer::compileShader(unsigned int& shader, unsigned int type, const 
     int success;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if (!success) {
-        char infoLog[512];
-        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        std::cerr << "Shader compilation failed: " << infoLog << std::endl;
         return false;
     }
     return true;
@@ -59,24 +54,14 @@ bool MazeRenderer::createShaderProgram() {
     int success;
     glGetProgramiv(shaderProgram_, GL_LINK_STATUS, &success);
     if (!success) {
-        char infoLog[512];
-        glGetProgramInfoLog(shaderProgram_, 512, nullptr, infoLog);
-        std::cerr << "Shader linking failed: " << infoLog << std::endl;
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
         return false;
     }
 
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
     return true;
-}
-
-void MazeRenderer::setupMatrices(int screenWidth, int screenHeight) {
-    projMatrix_[0] = 2.0f / (float)screenWidth;
-    projMatrix_[5] = 2.0f / (float)screenHeight;
-    projMatrix_[10] = -1.0f;
-    projMatrix_[12] = -1.0f;
-    projMatrix_[13] = -1.0f;
-    projMatrix_[15] = 1.0f;
 }
 
 bool MazeRenderer::init(int screenWidth, int screenHeight) {
@@ -90,48 +75,53 @@ bool MazeRenderer::init(int screenWidth, int screenHeight) {
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
     glEnableVertexAttribArray(0);
 
-    setupMatrices(screenWidth, screenHeight);
-
-    glUseProgram(shaderProgram_);
-    int projLoc = glGetUniformLocation(shaderProgram_, "uProjection");
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, projMatrix_);
     glEnable(GL_LINE_SMOOTH);
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
     glLineWidth(2.0f);
+
+    screenWidth_ = (float)screenWidth;
+    screenHeight_ = (float)screenHeight;
 
     return true;
 }
 
 void MazeRenderer::drawWall(float x1, float y1, float x2, float y2) {
-    std::vector<float> vertices = { x1, y1, x2, y2 };
+    float nx1 = (x1 / screenWidth_) * 2.0f - 1.0f;
+    float ny1 = 1.0f - (y1 / screenHeight_) * 2.0f;
+    float nx2 = (x2 / screenWidth_) * 2.0f - 1.0f;
+    float ny2 = 1.0f - (y2 / screenHeight_) * 2.0f;
+
+    float vertices[] = { nx1, ny1, nx2, ny2 };
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO_);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
     glDrawArrays(GL_LINES, 0, 2);
 }
 
-void MazeRenderer::drawCell(int x, int y, const Cell& cell, float cellW, float cellH) {
+void MazeRenderer::drawCell(int x, int y, int grid_h, const Cell& cell, float cellW, float cellH) {
     float left = x * cellW;
     float right = (x + 1) * cellW;
-    float top = y * cellH;
-    float bottom = (y + 1) * cellH;
+    float top = (grid_h - y) * cellH;
+    float bottom = (grid_h - y-1) * cellH;
 
     int colorLoc = glGetUniformLocation(shaderProgram_, "uColor");
     glUniform3f(colorLoc, 1.0f, 1.0f, 1.0f);
-    if (cell.top) {
-        drawWall(left, top, right, top);
-    }
-    if (cell.bottom) {
-        drawWall(left, bottom, right, bottom);
-    }
-    if (cell.left) {
-        drawWall(left, top, left, bottom);
-    }
+
+    
+
     if (cell.right) {
         drawWall(right, top, right, bottom);
     }
-}
+    
 
+    if (cell.bottom) {
+        drawWall(left, bottom, right, bottom);
+    }
+    
+
+   
+    
+}
 
 void MazeRenderer::render(const Grid& grid) {
     float cellW = (float)cellSize_;
@@ -142,9 +132,12 @@ void MazeRenderer::render(const Grid& grid) {
 
     for (int y = 0; y < grid.h; ++y) {
         for (int x = 0; x < grid.w; ++x) {
-            drawCell(x, y, grid.grid[y][x], cellW, cellH);
+            drawCell(x, y, grid.h, grid.grid[y][x], cellW, cellH);
         }
     }
+    int colorLoc = glGetUniformLocation(shaderProgram_, "uColor");
+    glUniform3f(colorLoc, 1.0f, 1.0f, 1.0f);
+    
 }
 
 void MazeRenderer::cleanup() {

@@ -1,31 +1,124 @@
-#pragma once
-#include "../include/game/invader.h"
+#include "../../include/game/invader.h"
 #include <cmath>
+#include <queue>
+#include <map>
+#include <algorithm>
 
-Invader::Invader(int startX, int startY) : Entity(startX, startY, 2) {}
+size_t VectorHash::operator()(const std::pair<int, int>& p) const {
+    return p.first * 31 + p.second;
+}
+
+Invader::Invader(int startX, int startY) : Entity(startX, startY, 1) {}
 
 void Invader::move(int dx, int dy) {
     Entity::move(dx, dy);
 }
 
-void Invader::chase(Entity* target) {
-    if (!target) return;
+void Invader::updateMovement() {
+    if (!currentPath_.empty() && pathIndex_ < currentPath_.size()) {
+        auto& nextPos = currentPath_[pathIndex_];
+        int dx = nextPos.first - x_;
+        int dy = nextPos.second - y_;
 
-    int dx = 0, dy = 0;
-    if (target->getX() > x_) dx = 1;
-    else if (target->getX() < x_) dx = -1;
-    if (target->getY() > y_) dy = 1;
-    else if (target->getY() < y_) dy = -1;
-
-    move(dx, dy);
+        if (abs(dx) + abs(dy) == 1) {
+            if (dx != 0) dx = (dx > 0) ? 1 : -1;
+            if (dy != 0) dy = (dy > 0) ? 1 : -1;
+            move(dx, dy);
+            pathIndex_++;
+        }
+        else {
+            currentPath_.clear();
+            pathIndex_ = 0;
+        }
+    }
 }
 
-void Invader::attack(Entity* target) {
-    if (!target) return;
+std::vector<std::pair<int, int>> Invader::findPath(const Grid& grid, int targetX, int targetY) {
+    std::vector<std::pair<int, int>> path;
 
-    int distX = std::abs(x_ - target->getX());
-    int distY = std::abs(y_ - target->getY());
-
-    if (distX <= 1 && distY <= 1) {
+    if (!grid_ || (x_ == targetX && y_ == targetY)) {
+        return path;
     }
+
+    std::queue<std::pair<int, int>> q;
+    std::unordered_set<std::pair<int, int>, VectorHash> visited;
+    std::map<std::pair<int, int>, std::pair<int, int>> parent;
+
+    q.push({ x_, y_ });
+    visited.insert({ x_, y_ });
+    parent[{x_, y_}] = { -1, -1 };
+
+    std::vector<std::pair<int, int>> directions = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
+
+    bool found = false;
+    std::pair<int, int> target = { targetX, targetY };
+
+    while (!q.empty() && !found) {
+        auto current = q.front();
+        q.pop();
+
+        for (const auto& dir : directions) {
+            int newX = current.first + dir.first;
+            int newY = current.second + dir.second;
+            std::pair<int, int> next = { newX, newY };
+
+            if (newX >= 0 && newX < grid.w && newY >= 0 && newY < grid.h &&
+                visited.find(next) == visited.end()) {
+
+                bool canPass = false;
+                int x = current.first;
+                int y = current.second;
+
+                if (dir.first == 1) {
+                    canPass = !grid.grid[y][x].right;
+                }
+                else if (dir.first == -1) {
+                    canPass = !grid.grid[y][x - 1].right;
+                }
+                else if (dir.second == 1) {
+                    canPass = !grid.grid[y][x].bottom;
+                }
+                else if (dir.second == -1) {
+                    canPass = !grid.grid[y - 1][x].bottom;
+                }
+
+                if (canPass) {
+                    visited.insert(next);
+                    parent[next] = current;
+                    q.push(next);
+
+                    if (next == target) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if (found) {
+        std::pair<int, int> current = target;
+        while (current != std::pair<int, int>{x_, y_}) {
+            path.push_back(current);
+            current = parent[current];
+        }
+        std::reverse(path.begin(), path.end());
+    }
+
+    return path;
+}
+std::pair<int, int> Invader::getNextStep(const Grid& grid, int targetX, int targetY) {
+    auto path = findPath(grid, targetX, targetY);
+    if (!path.empty()) {
+        return path[0];
+    }
+    return { x_, y_ };
+}
+
+void Invader::chase(Entity* target, const Grid& grid) {
+    if (!target) return;
+    target_ = target;
+    grid_ = &grid;
+
+    currentPath_ = findPath(grid, target->getX(), target->getY());
+    pathIndex_ = 0;
 }
