@@ -1,30 +1,17 @@
-// input_handler.cpp
 #include "../include/utils/inputhandler.h"
 
-Command InputHandler::lastCommand_ = Command::NONE;
-
 Command InputHandler::getCommand(GLFWwindow* window) {
-    Command cmd = lastCommand_;
-    return cmd;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) return Command::MOVE_DOWN;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) return Command::MOVE_UP;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) return Command::MOVE_LEFT;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) return Command::MOVE_RIGHT;
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) return Command::QUIT;
+
+    return Command::NONE;
 }
 
 void InputHandler::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (action != GLFW_PRESS) {
-        lastCommand_ = Command::NONE;
-        return;
-    }
-
-    switch (key) {
-    case GLFW_KEY_W: lastCommand_ = Command::MOVE_DOWN;  break;
-    case GLFW_KEY_S: lastCommand_ = Command::MOVE_UP; break;  
-    case GLFW_KEY_A: lastCommand_ = Command::MOVE_LEFT; break;
-    case GLFW_KEY_D: lastCommand_ = Command::MOVE_RIGHT; break;
-    case GLFW_KEY_ESCAPE: lastCommand_ = Command::QUIT; break;
-    case GLFW_KEY_SPACE: lastCommand_ = Command::SHOOT; break;
-    default: break;
-    }
 }
 
 void InputHandler::resetLastCommand() {
-    lastCommand_ = Command::NONE;
 }

@@ -1,7 +1,12 @@
 #include "../../include/game/game_logic.h"
+#include "../../include/algorithms/create_maze.h"
 #include <vector>
 #include <iostream>
+#include <random>
+#include <algorithm>
 using namespace std;
+
+GameLogic::GameLogic() : freezeTimer_(0.0f), speedBoostTimer_(0.0f), speedBoostActive_(false) {}
 
 bool GameLogic::update(Grid& grid, Player& player, Command cmd) {
     switch (cmd) {
@@ -54,6 +59,10 @@ void GameLogic::addInvader(vector<Invader>& invaders, int x, int y) {
 }
 
 void GameLogic::updateInvaders(vector<Invader>& invaders, Player& player, const Grid& grid) {
+    if (freezeTimer_ > 0.0f) {
+        return;
+    }
+
     for (Invader& invader : invaders) {
         invader.chase(&player, grid);
         invader.updateMovement();
@@ -61,7 +70,7 @@ void GameLogic::updateInvaders(vector<Invader>& invaders, Player& player, const 
 }
 
 void GameLogic::tryMove(Entity& entity, const Grid& grid, int dx, int dy) {
-    if (isValidMove(entity, grid, dx, dy)) {
+    if (!entity.isMoving() && isValidMove(entity, grid, dx, dy)) {
         entity.move(dx, dy);
     }
 }
@@ -72,4 +81,118 @@ void GameLogic::changeWalls(Grid& grid) {
             grid.grid[i][j].inverse();
         }
     }
+}
+
+void GameLogic::generateCoins(vector<Coin>& coins, const Grid& grid, int count) {
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> distX(0, grid.w - 1);
+    uniform_int_distribution<int> distY(0, grid.h - 1);
+    uniform_int_distribution<int> distType(0, 4);
+
+    coins.clear();
+
+    for (int i = 0; i < count; ++i) {
+        int x = distX(gen);
+        int y = distY(gen);
+
+        if ((x == 1 && y == 1) || (x == 0 && y == 0)) {
+            --i;
+            continue;
+        }
+
+        bool tooClose = false;
+        for (const auto& coin : coins) {
+            if (abs(coin.x - x) + abs(coin.y - y) < 3) {
+                tooClose = true;
+                break;
+            }
+        }
+
+        if (tooClose) {
+            --i;
+            continue;
+        }
+
+        CoinType type = static_cast<CoinType>(distType(gen));
+        coins.push_back(Coin(x, y, type));
+    }
+}
+
+void GameLogic::checkCoinCollision(Player& player, vector<Coin>& coins, Grid& grid, vector<Invader>& invaders) {
+    int playerX = player.getX();
+    int playerY = player.getY();
+
+    for (auto& coin : coins) {
+        if (coin.active && coin.x == playerX && coin.y == playerY) {
+            coin.active = false;
+            applyCoinEffect(coin.type, player, grid, invaders);
+        }
+    }
+
+    coins.erase(
+        remove_if(coins.begin(), coins.end(), [](const Coin& c) { return !c.active; }),
+        coins.end()
+    );
+}
+
+void GameLogic::updateCoins(vector<Coin>& coins) {
+    for (auto& coin : coins) {
+        coin.animationPhase += 0.05f;
+    }
+}
+
+void GameLogic::applyCoinEffect(CoinType type, Player& player, Grid& grid, vector<Invader>& invaders) {
+    random_device rd;
+    mt19937 gen(rd());
+
+    switch (type) {
+    case CoinType::REBUILD_MAZE:
+        rebuildMaze(grid);
+        break;
+
+    case CoinType::SPEED_BOOST:
+        if (!speedBoostActive_) {
+            player.setSpeed(player.getSpeed() * 1.5f);
+            speedBoostActive_ = true;
+            speedBoostTimer_ = 5.0f;
+        }
+        break;
+
+    case CoinType::FREEZE_INVADERS:
+        freezeTimer_ = 3.0f;
+        break;
+
+    case CoinType::TELEPORT:
+    {
+        uniform_int_distribution<int> distX(1, grid.w - 2);
+        uniform_int_distribution<int> distY(1, grid.h - 2);
+        for (auto& invader : invaders) {
+            invader.setPosition(distX(gen), distY(gen));
+        }
+    }
+    break;
+
+    case CoinType::EXTRA_LIFE:
+        break;
+    }
+}
+
+void GameLogic::updateTimers(Player& player) {
+    if (freezeTimer_ > 0.0f) {
+        freezeTimer_ -= 0.016f;
+    }
+
+    if (speedBoostActive_) {
+        speedBoostTimer_ -= 0.016f;
+        if (speedBoostTimer_ <= 0.0f) {
+            player.setSpeed(0.1f);
+            speedBoostActive_ = false;
+        }
+    }
+}
+
+void GameLogic::rebuildMaze(Grid& grid) {
+    MazeGenerator::generate(grid);
+    MazeGenerator::addExtraPaths(grid, (grid.w * grid.h) / 3);
 }
